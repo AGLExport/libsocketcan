@@ -23,11 +23,21 @@
  */
 #include "libsocketcan-utils.h"
 
-
 #define parse_rtattr_nested(tb, max, rta) \
 	(parse_rtattr((tb), (max), RTA_DATA(rta), RTA_PAYLOAD(rta)))
 
 #define IFLA_CAN_MAX	(__IFLA_CAN_MAX - 1)
+
+struct get_req {
+	struct nlmsghdr n;
+	struct ifinfomsg i;
+};
+
+struct set_req {
+	struct nlmsghdr n;
+	struct ifinfomsg i;
+	char buf[1024];
+};
 
 /**
  * @brief this method parse attributions of link info

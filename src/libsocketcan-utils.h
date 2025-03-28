@@ -60,17 +60,6 @@
 #define GET_XSTATS (8)
 #define GET_LINK_STATS (9)
 
-struct get_req {
-	struct nlmsghdr n;
-	struct ifinfomsg i;
-};
-
-struct set_req {
-	struct nlmsghdr n;
-	struct ifinfomsg i;
-	char buf[1024];
-};
-
 struct req_info {
 	__u8 restart;
 	__u8 disable_autorestart;
