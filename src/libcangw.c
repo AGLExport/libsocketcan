@@ -199,3 +199,44 @@ int cangw_delete_rule(socketcan_gw_rule_t *rule)
 do_return:
 	return result;
 }
+
+/**
+ * @ingroup extern
+ * cangw_clean_rule - delete routing rule to can gateway
+ *
+ * @return 0 if success
+ * @return -1 if operation is failed
+ * @return -2 if linux does not support can gateway
+ */
+int cangw_clean_rule(void)
+{
+	int result = 0;
+	int ret = -1;
+	unsigned int ifindex = 0;
+	struct s_request_data req;
+
+	// Setup common message
+	memset(&req, 0, sizeof(req));
+
+	req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	req.nh.nlmsg_type  = RTM_DELROUTE;
+	req.nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtcanmsg));
+	req.nh.nlmsg_seq   = 0;
+
+	req.rtcan.can_family  = AF_CAN;
+	req.rtcan.gwtype = CGW_TYPE_CAN_CAN;
+	req.rtcan.flags = 0;
+
+	// If src and dst ifindex set to 0, the all rule are deleted.
+	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &ifindex, sizeof(ifindex));
+	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &ifindex, sizeof(ifindex));
+
+	ret = send_cangw_request(&req);
+	if (ret < 0) {
+		result = -1;
+		goto do_return;
+	}
+
+do_return:
+	return result;
+}
