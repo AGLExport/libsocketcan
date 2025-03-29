@@ -203,13 +203,12 @@ do_return:
 /**
  * @ingroup extern
  * cangw_clean_rule - delete routing rule to can gateway
- * @param src_ifindex structure of the can gateway.
- * @param dst_ifindex structure of the can gateway.
+ * @param src_ifindex interface index of routing source.
+ * @param dst_ifindex interface index of routing destination.
  *
  * @return 0 if success
  * @return -1 if operation is failed
  * @return -2 if linux does not support can gateway
- * @return -3 if argument is invalid
  */
 int cangw_clean_rule(unsigned int src_ifindex, unsigned int dst_ifindex)
 {
