@@ -3,6 +3,8 @@
 
 #include "libsocketcan-utils.h"
 
+#include <libsocketcangw.h>
+
 enum {
 	UNSPEC,
 	ADD,
@@ -23,31 +25,84 @@ struct fdmodattr {
 	__u8 instruction;
 } __attribute__((packed));
 
-int cangw_add_rule(void)
+struct s_request_data {
+	struct nlmsghdr nh;
+	struct rtcanmsg rtcan;
+	char buf[1500];
+};
+
+static int send_cangw_request(int sock_fd, struct s_request_data *req)
 {
-	struct {
-		struct nlmsghdr nh;
-		struct rtcanmsg rtcan;
-		char buf[1500];
-	} req;
-	int err = 0;
-	int s;
-	unsigned int src_ifindex = 0;
-	unsigned int dst_ifindex = 0;
-	__u16 flags = 0;
-	struct can_filter filter;
+	int result = 0;
+	int ret = -1;
+	struct nlmsghdr *nlh = NULL;
+	struct nlmsgerr *rte = NULL;
 	struct sockaddr_nl nladdr;
-	struct nlmsghdr *nlh;
-	struct nlmsgerr *rte;
-	unsigned char rxbuf[8192]; /* netlink receive buffer */
+	unsigned char rxbuf[8192];
 
+	memset(&nladdr, 0, sizeof(nladdr));
+	nladdr.nl_family = AF_NETLINK;
+	nladdr.nl_pid    = 0;
+	nladdr.nl_groups = 0;
+
+	ret = sendto(sock_fd, req, req->nh.nlmsg_len, 0, (struct sockaddr*)&nladdr, sizeof(nladdr));
+	if (ret < 0) {
+		result = -1;
+		goto do_return;
+	}
+
+	memset(rxbuf, 0, sizeof(rxbuf));
+	ret = recv(sock_fd, &rxbuf, sizeof(rxbuf), 0);
+	if (ret < 0) {
+		result = -1;
+		goto do_return;
+	}
+
+	nlh = (struct nlmsghdr *)rxbuf;
+	if (nlh->nlmsg_type != NLMSG_ERROR) {
+		result = -2;
+		goto do_return;
+	}
+
+	rte = (struct nlmsgerr *)NLMSG_DATA(nlh);
+	if (rte->error < 0) {
+		result = -3;
+	}
+
+do_return:
+	return result;
+}
+/**
+ * @ingroup extern
+ * cangw_add_rule - add routing rule to can gateway
+ * @param rule rule structure of the can gateway.
+ *
+ * @return 0 if success
+ * @return -1 if operation is failed
+ * @return -2 if linux does not support can gateway
+ * @return -3 if argument is invalid
+ */
+int cangw_add_rule(socketcan_gw_rule_t *rule)
+{
+	int result = 0;
+	int ret = -1;
+	int sock_fd = -1;
+	struct s_request_data req;
+
+	if (rule == NULL) {
+		result = -3;
+		goto do_return;
+	}
+
+	// Open netlink socket interface
+	sock_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (sock_fd < 0) {
+		result = -2;
+		goto do_return;
+	}
+
+	// Setup common message
 	memset(&req, 0, sizeof(req));
-
-	flags |= CGW_FLAGS_CAN_ECHO;
-	filter.can_id = 0x3C0;
-	filter.can_mask = 0xff0;
-
-	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 
 	req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 	req.nh.nlmsg_type  = RTM_NEWROUTE;
@@ -56,43 +111,37 @@ int cangw_add_rule(void)
 
 	req.rtcan.can_family  = AF_CAN;
 	req.rtcan.gwtype = CGW_TYPE_CAN_CAN;
-	req.rtcan.flags = flags;
+	req.rtcan.flags = 0;
 
-	src_ifindex = if_nametoindex("vcan0");
-	dst_ifindex = if_nametoindex("vcan1");
-	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &src_ifindex, sizeof(src_ifindex));
-	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &dst_ifindex, sizeof(dst_ifindex));
-	addattr_l(&req.nh, sizeof(req), CGW_FILTER, &filter, sizeof(filter));
+	if ((rule->src_ifindex == 0) || (rule->dst_ifindex == 0)) {
+		// invalid ifindex
+		result = -3;
+		goto do_return;
+	}
+	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &rule->src_ifindex, sizeof(rule->src_ifindex));
+	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &rule->dst_ifindex, sizeof(rule->dst_ifindex));
 
-	memset(&nladdr, 0, sizeof(nladdr));
-	nladdr.nl_family = AF_NETLINK;
-	nladdr.nl_pid    = 0;
-	nladdr.nl_groups = 0;
-
-	err = sendto(s, &req, req.nh.nlmsg_len, 0,
-		(struct sockaddr*)&nladdr, sizeof(nladdr));
-	if (err < 0) {
-	perror("netlink sendto");
-	return -1;
+	// Echo option
+	if ((rule->options | SOCKETCAN_GW_RULE_ECHO) == SOCKETCAN_GW_RULE_ECHO) {
+		if (rule->echo == 1) {
+			req.rtcan.flags |= CGW_FLAGS_CAN_ECHO;
+		}
 	}
 
-	memset(rxbuf, 0x0, sizeof(rxbuf));
-	err = recv(s, &rxbuf, sizeof(rxbuf), 0);
-	if (err < 0) {
-		perror("netlink recv");
-		return err;
+	if ((rule->options | SOCKETCAN_GW_RULE_FILTER) == SOCKETCAN_GW_RULE_FILTER) {
+		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &rule->filter, sizeof(struct can_filter));
 	}
-	nlh = (struct nlmsghdr *)rxbuf;
-	if (nlh->nlmsg_type != NLMSG_ERROR) {
-		fprintf(stderr, "unexpected netlink answer of type %d\n", nlh->nlmsg_type);
-		return -EINVAL;
+
+	ret = send_cangw_request(sock_fd, &req);
+	if (ret < 0) {
+		result = -1;
+		goto do_return;
 	}
-	rte = (struct nlmsgerr *)NLMSG_DATA(nlh);
-	err = rte->error;
-	if (err < 0)
-		fprintf(stderr, "netlink error %d (%s)\n", err, strerror(abs(err)));
 
-	close(s);
+do_return:
+	if (sock_fd >= 0) {
+		close(sock_fd);
+	}
 
-	return 0;
+	return result;
 }
