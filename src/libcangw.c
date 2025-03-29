@@ -145,3 +145,77 @@ do_return:
 
 	return result;
 }
+
+/**
+ * @ingroup extern
+ * cangw_delete_rule - delete routing rule to can gateway
+ * @param rule rule structure of the can gateway.
+ *
+ * @return 0 if success
+ * @return -1 if operation is failed
+ * @return -2 if linux does not support can gateway
+ * @return -3 if argument is invalid
+ */
+int cangw_delete_rule(socketcan_gw_rule_t *rule)
+{
+	int result = 0;
+	int ret = -1;
+	int sock_fd = -1;
+	struct s_request_data req;
+
+	if (rule == NULL) {
+		result = -3;
+		goto do_return;
+	}
+
+	// Open netlink socket interface
+	sock_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (sock_fd < 0) {
+		result = -2;
+		goto do_return;
+	}
+
+	// Setup common message
+	memset(&req, 0, sizeof(req));
+
+	req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	req.nh.nlmsg_type  = RTM_DELROUTE;
+	req.nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtcanmsg));
+	req.nh.nlmsg_seq   = 0;
+
+	req.rtcan.can_family  = AF_CAN;
+	req.rtcan.gwtype = CGW_TYPE_CAN_CAN;
+	req.rtcan.flags = 0;
+
+	if ((rule->src_ifindex == 0) || (rule->dst_ifindex == 0)) {
+		// invalid ifindex
+		result = -3;
+		goto do_return;
+	}
+	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &rule->src_ifindex, sizeof(rule->src_ifindex));
+	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &rule->dst_ifindex, sizeof(rule->dst_ifindex));
+
+	// Echo option
+	if ((rule->options | SOCKETCAN_GW_RULE_ECHO) == SOCKETCAN_GW_RULE_ECHO) {
+		if (rule->echo == 1) {
+			req.rtcan.flags |= CGW_FLAGS_CAN_ECHO;
+		}
+	}
+
+	if ((rule->options | SOCKETCAN_GW_RULE_FILTER) == SOCKETCAN_GW_RULE_FILTER) {
+		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &rule->filter, sizeof(struct can_filter));
+	}
+
+	ret = send_cangw_request(sock_fd, &req);
+	if (ret < 0) {
+		result = -1;
+		goto do_return;
+	}
+
+do_return:
+	if (sock_fd >= 0) {
+		close(sock_fd);
+	}
+
+	return result;
+}

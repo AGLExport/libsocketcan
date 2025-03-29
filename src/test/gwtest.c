@@ -25,6 +25,12 @@ int cangw_add_rule_test(void)
 		return -1;
 	}
 
+	ret = cangw_delete_rule(&gw_rule);
+	if (ret < 0) {
+		fprintf(stdout,"cangw_delete_rule is failed ret = %d\n",ret);
+		return -2;
+	}
+
 	return 0;
 }
 
