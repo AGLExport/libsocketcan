@@ -47,36 +47,6 @@
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
-#define IF_UP (1)
-#define IF_DOWN (2)
-
-#define GET_STATE (1)
-#define GET_RESTART_MS (2)
-#define GET_BITTIMING (3)
-#define GET_CTRLMODE (4)
-#define GET_CLOCK (5)
-#define GET_BITTIMING_CONST (6)
-#define GET_BERR_COUNTER (7)
-#define GET_XSTATS (8)
-#define GET_LINK_STATS (9)
-
-struct req_info {
-	__u8 restart;
-	__u8 disable_autorestart;
-	__u32 restart_ms;
-	struct can_ctrlmode *ctrlmode;
-	struct can_bittiming *bittiming;
-	struct can_bittiming *dbittiming;
-};
-
-void parse_rtattr(struct rtattr **tb, int max, struct rtattr *rta, int len);
 int addattr32(struct nlmsghdr *n, size_t maxlen, int type, __u32 data);
 int addattr_l(struct nlmsghdr *n, size_t maxlen, int type, const void *data, int alen);
-int send_mod_request(int fd, struct nlmsghdr *n);
-int send_dump_request(int fd, const char *name, int family, int type);
-int open_nl_sock();
-int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res);
-int get_link(const char *name, __u8 acquire, void *res);
-int do_set_nl_link(int fd, __u8 if_state, const char *name, struct req_info *req_info);
-int set_link(const char *name, __u8 if_state, struct req_info *req_info);
 #endif //#ifndef LIBSOCKETCAN_UTILS_H
