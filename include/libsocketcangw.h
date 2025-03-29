@@ -25,7 +25,6 @@
   * @brief API overview
   */
  #include <linux/can.h>
-// #include <linux/can/gw.h>
  
  #ifdef __cplusplus
  extern "C" {
@@ -43,10 +42,11 @@ struct s_socketcan_gw_rule {
 	unsigned int	echo;
 	struct can_filter filter;
  };
- typedef struct s_socketcan_gw_rule socketcan_gw_rule_t;
+typedef struct s_socketcan_gw_rule socketcan_gw_rule_t;
  
 
- int cangw_add_rule(socketcan_gw_rule_t *rule);
+int cangw_add_rule(socketcan_gw_rule_t *rule);
+int cangw_delete_rule(socketcan_gw_rule_t *rule);
  
  #ifdef __cplusplus
  }

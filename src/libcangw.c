@@ -5,14 +5,6 @@
 
 #include <libsocketcangw.h>
 
-enum {
-	UNSPEC,
-	ADD,
-	DEL,
-	FLUSH,
-	LIST
-};
-
 struct modattr {
 	struct can_frame cf;
 	__u8 modtype;
@@ -31,14 +23,22 @@ struct s_request_data {
 	char buf[1500];
 };
 
-static int send_cangw_request(int sock_fd, struct s_request_data *req)
+static int send_cangw_request(struct s_request_data *req)
 {
 	int result = 0;
 	int ret = -1;
+	int sock_fd = -1;
 	struct nlmsghdr *nlh = NULL;
 	struct nlmsgerr *rte = NULL;
 	struct sockaddr_nl nladdr;
 	unsigned char rxbuf[8192];
+
+	// Open netlink socket interface
+	sock_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (sock_fd < 0) {
+		result = -1;
+		goto do_return;
+	}
 
 	memset(&nladdr, 0, sizeof(nladdr));
 	nladdr.nl_family = AF_NETLINK;
@@ -70,6 +70,10 @@ static int send_cangw_request(int sock_fd, struct s_request_data *req)
 	}
 
 do_return:
+	if (sock_fd >= 0) {
+		close(sock_fd);
+	}
+
 	return result;
 }
 /**
@@ -86,18 +90,10 @@ int cangw_add_rule(socketcan_gw_rule_t *rule)
 {
 	int result = 0;
 	int ret = -1;
-	int sock_fd = -1;
 	struct s_request_data req;
 
 	if (rule == NULL) {
 		result = -3;
-		goto do_return;
-	}
-
-	// Open netlink socket interface
-	sock_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-	if (sock_fd < 0) {
-		result = -2;
 		goto do_return;
 	}
 
@@ -132,17 +128,13 @@ int cangw_add_rule(socketcan_gw_rule_t *rule)
 		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &rule->filter, sizeof(struct can_filter));
 	}
 
-	ret = send_cangw_request(sock_fd, &req);
+	ret = send_cangw_request(&req);
 	if (ret < 0) {
 		result = -1;
 		goto do_return;
 	}
 
 do_return:
-	if (sock_fd >= 0) {
-		close(sock_fd);
-	}
-
 	return result;
 }
 
@@ -160,18 +152,10 @@ int cangw_delete_rule(socketcan_gw_rule_t *rule)
 {
 	int result = 0;
 	int ret = -1;
-	int sock_fd = -1;
 	struct s_request_data req;
 
 	if (rule == NULL) {
 		result = -3;
-		goto do_return;
-	}
-
-	// Open netlink socket interface
-	sock_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-	if (sock_fd < 0) {
-		result = -2;
 		goto do_return;
 	}
 
@@ -206,16 +190,12 @@ int cangw_delete_rule(socketcan_gw_rule_t *rule)
 		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &rule->filter, sizeof(struct can_filter));
 	}
 
-	ret = send_cangw_request(sock_fd, &req);
+	ret = send_cangw_request(&req);
 	if (ret < 0) {
 		result = -1;
 		goto do_return;
 	}
 
 do_return:
-	if (sock_fd >= 0) {
-		close(sock_fd);
-	}
-
 	return result;
 }
