@@ -130,24 +130,6 @@ static int free_gw_rules(socketcan_gw_rules_t *gw_rules)
 	return 0;
 }
 
-static int print_gw_rules(socketcan_gw_rules_t *gw_rules)
-{
-	char src_ifname[IF_NAMESIZE]; /* interface name for if_indextoname() */
-	char dst_ifname[IF_NAMESIZE]; /* interface name for if_indextoname() */
-
-	for(size_t i=0; i < gw_rules->rule_num; i++) {
-		socketcan_gw_rule_t *rule = gw_rules->rules[i];
-
-		fprintf(stdout, "cangw: -s %s -d %s -f %03X:%X\n", 
-			if_indextoname(rule->src_ifindex, src_ifname), 
-			if_indextoname(rule->dst_ifindex, dst_ifname),
-			rule->filter.can_id,
-			rule->filter.can_mask);
-	}
-
-	return 0;
-}
-
 static int parse_listing_data(socketcan_gw_rules_t *gw_rules, unsigned char *rxbuf, int len)
 {
 	struct rtcanmsg *rtc;
@@ -493,7 +475,7 @@ int cangw_get_rules(socketcan_gw_rules_t **gw_rules)
 		if (parse_listing_data(pgw_rules, rxbuf, ret))
 			break;
 	}
-	print_gw_rules(pgw_rules);
+
 	(*gw_rules) = pgw_rules;
 
 do_return:
