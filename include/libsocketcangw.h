@@ -47,7 +47,7 @@ typedef struct s_socketcan_gw_rule socketcan_gw_rule_t;
 
 int cangw_add_rule(socketcan_gw_rule_t *rule);
 int cangw_delete_rule(socketcan_gw_rule_t *rule);
-int cangw_clean_rule(unsigned int src_ifindex, unsigned int dst_ifindex);
+int cangw_clean_rule(void);
  
  #ifdef __cplusplus
  }

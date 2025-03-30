@@ -355,17 +355,16 @@ do_return:
 /**
  * @ingroup extern
  * cangw_clean_rule - delete routing rule to can gateway
- * @param src_ifindex interface index of routing source.
- * @param dst_ifindex interface index of routing destination.
  *
  * @return 0 if success
  * @return -1 if operation is failed
  * @return -2 if linux does not support can gateway
  */
-int cangw_clean_rule(unsigned int src_ifindex, unsigned int dst_ifindex)
+int cangw_clean_rule(void)
 {
 	int result = 0;
 	int ret = -1;
+	unsigned int ifindex = 0;
 	struct s_request_data req;
 
 	// Setup common message
@@ -380,8 +379,9 @@ int cangw_clean_rule(unsigned int src_ifindex, unsigned int dst_ifindex)
 	req.rtcan.gwtype = CGW_TYPE_CAN_CAN;
 	req.rtcan.flags = 0;
 
-	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &src_ifindex, sizeof(src_ifindex));
-	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &dst_ifindex, sizeof(dst_ifindex));
+	// If src and dst ifindex set to 0, the all rule are deleted.
+	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &ifindex, sizeof(ifindex));
+	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &ifindex, sizeof(ifindex));
 
 	ret = send_cangw_set_request(&req);
 	if (ret < 0) {
