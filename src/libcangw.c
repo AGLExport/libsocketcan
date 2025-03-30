@@ -332,13 +332,13 @@ int cangw_delete_rule(socketcan_gw_rule_t *rule)
 	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &rule->dst_ifindex, sizeof(rule->dst_ifindex));
 
 	// Echo option
-	if ((rule->options | SOCKETCAN_GW_RULE_ECHO) == SOCKETCAN_GW_RULE_ECHO) {
+	if ((rule->options & SOCKETCAN_GW_RULE_ECHO) == SOCKETCAN_GW_RULE_ECHO) {
 		if (rule->echo == 1) {
 			req.rtcan.flags |= CGW_FLAGS_CAN_ECHO;
 		}
 	}
 
-	if ((rule->options | SOCKETCAN_GW_RULE_FILTER) == SOCKETCAN_GW_RULE_FILTER) {
+	if ((rule->options & SOCKETCAN_GW_RULE_FILTER) == SOCKETCAN_GW_RULE_FILTER) {
 		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &rule->filter, sizeof(struct can_filter));
 	}
 
