@@ -6,6 +6,7 @@ int cangw_add_rule_test(void)
 {
 	int ret = -1;
 	socketcan_gw_rule_t gw_rule;
+	socketcan_gw_rules_t *gw_rules = NULL;	
 
 	memset(&gw_rule, 0, sizeof(gw_rule));
 
@@ -25,11 +26,27 @@ int cangw_add_rule_test(void)
 		return -1;
 	}
 
+	ret = cangw_get_rules(&gw_rules);
+	if (ret < 0) {
+		fprintf(stdout,"cangw_get_rules is failed ret = %d\n",ret);
+		return -4;
+	}
+	cangw_release_rules(gw_rules);
+	fprintf(stdout,"\n");
+
 	ret = cangw_delete_rule(&gw_rule);
 	if (ret < 0) {
 		fprintf(stdout,"cangw_delete_rule is failed ret = %d\n",ret);
 		return -2;
 	}
+
+	ret = cangw_get_rules(&gw_rules);
+	if (ret < 0) {
+		fprintf(stdout,"cangw_get_rules is failed ret = %d\n",ret);
+		return -4;
+	}
+	cangw_release_rules(gw_rules);
+	fprintf(stdout,"\n");
 
 	ret = cangw_add_rule(&gw_rule);
 	if (ret < 0) {
@@ -37,11 +54,33 @@ int cangw_add_rule_test(void)
 		return -3;
 	}
 
-	ret = cangw_clean_rule(if_nametoindex("vcan0"), if_nametoindex("vxcan0"));
+	ret = cangw_clean_rule();
 	if (ret < 0) {
 		fprintf(stdout,"cangw_clean_rule is failed ret = %d\n",ret);
 		return -4;
 	}
+
+	ret = cangw_get_rules(&gw_rules);
+	if (ret < 0) {
+		fprintf(stdout,"cangw_get_rules is failed ret = %d\n",ret);
+		return -4;
+	}
+	cangw_release_rules(gw_rules);
+	fprintf(stdout,"\n");
+
+	ret = cangw_add_rule(&gw_rule);
+	if (ret < 0) {
+		fprintf(stdout,"cangw_add_rule is failed ret = %d\n",ret);
+		return -3;
+	}
+
+	ret = cangw_get_rules(&gw_rules);
+	if (ret < 0) {
+		fprintf(stdout,"cangw_get_rules is failed ret = %d\n",ret);
+		return -4;
+	}
+	cangw_release_rules(gw_rules);
+	fprintf(stdout,"\n");
 
 	return 0;
 }
