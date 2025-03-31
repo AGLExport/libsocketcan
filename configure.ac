@@ -149,8 +149,6 @@ AC_ARG_ENABLE([test],
   [:],
   [enable_test=no])
 AM_CONDITIONAL([ENABLE_TEST], [test "$enable_test" = "yes"])
-
-PKG_PROG_PKG_CONFIG
 AS_CASE(
   ["$enable_test"],
   [yes], [PKG_CHECK_MODULES([CMOCKA], [cmocka])],[])
