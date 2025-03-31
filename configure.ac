@@ -145,13 +145,13 @@ fi
 # Enable unit test
 #
 AC_ARG_ENABLE([test],
-  [AS_HELP_STRING([--enable-test], [Enable unit test build (cmocka, default is no])],
+  [AS_HELP_STRING([--enable-test], [Enable unit test build (cmocka is required, default is no])],
   [:],
   [enable_test=no])
 AM_CONDITIONAL([ENABLE_TEST], [test "$enable_test" = "yes"])
 AS_CASE(
   ["$enable_test"],
-  [yes], [PKG_CHECK_MODULES([CMOCKA], [cmocka])])
+  [yes], [PKG_CHECK_MODULES([CMOCKA], [cmocka])],[])
 
 AC_CONFIG_FILES([
 	GNUmakefile
