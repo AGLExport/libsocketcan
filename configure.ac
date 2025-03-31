@@ -141,12 +141,23 @@ if test "$enable_address_sanitizer" = "yes"; then
     CFLAGS="${CFLAGS} -fsanitize=address"
 fi
 
+#
+# Enable unit test
+#
+AC_ARG_ENABLE([test],
+  [AS_HELP_STRING([--enable-test], [Enable unit test build (cmocka, default is no])],
+  [:],
+  [enable_test=no])
+AM_CONDITIONAL([ENABLE_TEST], [test "$enable_test" = "yes"])
+PKG_CHECK_MODULES([CMOCKA], [cmocka], , enable_test=no)
+
 AC_CONFIG_FILES([
 	GNUmakefile
 	config/libsocketcan.pc
 	config/GNUmakefile
 	include/GNUmakefile
 	src/GNUmakefile
+	test/GNUmakefile
 	])
 AC_OUTPUT
 
