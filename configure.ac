@@ -149,7 +149,9 @@ AC_ARG_ENABLE([test],
   [:],
   [enable_test=no])
 AM_CONDITIONAL([ENABLE_TEST], [test "$enable_test" = "yes"])
-PKG_CHECK_MODULES([CMOCKA], [cmocka], , enable_test=no)
+AS_CASE(
+  ["$enable_test"],
+  [yes], [PKG_CHECK_MODULES([CMOCKA], [cmocka])])
 
 AC_CONFIG_FILES([
 	GNUmakefile
