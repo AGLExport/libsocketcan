@@ -193,9 +193,9 @@ static int parse_listing_data(socketcan_gw_rules_t *gw_rules, unsigned char *rxb
 		rule->options = (SOCKETCAN_GW_RULE_ECHO | SOCKETCAN_GW_RULE_FILTER);
 
 		if ((rtc->flags & CGW_FLAGS_CAN_ECHO) == CGW_FLAGS_CAN_ECHO) {
-			rule->options = 1;
+			rule->echo = 1;
 		} else {
-			rule->options = 0;
+			rule->echo = 0;
 		}
 
 		rta = (struct rtattr *) RTCAN_RTA(rtc);
