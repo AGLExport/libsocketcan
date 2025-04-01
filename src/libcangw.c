@@ -26,6 +26,16 @@ struct s_request_data {
 #define RTCAN_RTA(r)  ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct rtcanmsg))))
 #define RTCAN_PAYLOAD(n) NLMSG_PAYLOAD(n,sizeof(struct rtcanmsg))
 
+/**
+ * @ingroup intern
+ * send_cangw_set_request - send request to add gw rule into kernel
+ * @param req pointer to request data.
+ *
+ * @return 0 if success
+ * @return -1 if operation is failed
+ * @return -2 if linux does not support can gateway
+ * @return -3 if returned fail response
+ */
 static int send_cangw_set_request(struct s_request_data *req)
 {
 	int result = 0;
