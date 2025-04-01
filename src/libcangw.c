@@ -404,8 +404,8 @@ do_return:
 
 /**
  * @ingroup extern
- * cangw_delete_rule - delete routing rule to can gateway
- * @param gw_rules rule structure of the can gateway.
+ * cangw_get_rules - get can gateway routing rule
+ * @param gw_rules double pointer to rules structure of the can gateway to get existing rules.
  *
  * @return 0 if success
  * @return -1 if operation is failed
@@ -426,16 +426,8 @@ int cangw_get_rules(socketcan_gw_rules_t **gw_rules)
 		goto do_return;
 	}
 
-	memset(&req, 0, sizeof(req));
-
-	req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-	req.nh.nlmsg_type  = RTM_GETROUTE;
-	req.nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtcanmsg));
-	req.nh.nlmsg_seq   = 0;
-
-	req.rtcan.can_family  = AF_CAN;
-	req.rtcan.gwtype = CGW_TYPE_CAN_CAN;
-	req.rtcan.flags = 0;
+	// Setup common message
+	init_req_data(&req, (NLM_F_REQUEST | NLM_F_DUMP), RTM_GETROUTE);
 
 	// Open netlink socket interface
 	sock_fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
