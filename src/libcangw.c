@@ -372,7 +372,7 @@ do_return:
 
 /**
  * @ingroup extern
- * cangw_clean_rule - delete routing rule to can gateway
+ * cangw_clean_rule - delete all routing rule to can gateway
  *
  * @return 0 if success
  * @return -1 if operation is failed
@@ -386,16 +386,7 @@ int cangw_clean_rule(void)
 	struct s_request_data req;
 
 	// Setup common message
-	memset(&req, 0, sizeof(req));
-
-	req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	req.nh.nlmsg_type  = RTM_DELROUTE;
-	req.nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtcanmsg));
-	req.nh.nlmsg_seq   = 0;
-
-	req.rtcan.can_family  = AF_CAN;
-	req.rtcan.gwtype = CGW_TYPE_CAN_CAN;
-	req.rtcan.flags = 0;
+	init_req_data(&req, (NLM_F_REQUEST | NLM_F_ACK), RTM_DELROUTE);
 
 	// If src and dst ifindex set to 0, the all rule are deleted.
 	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &ifindex, sizeof(ifindex));
