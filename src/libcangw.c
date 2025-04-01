@@ -483,12 +483,10 @@ do_return:
 }
 /**
  * @ingroup extern
- * cangw_delete_rule - delete routing rule to can gateway
- * @param gw_rules rule structure of the can gateway.
+ * cangw_release_rules - delete routing rule to can gateway
+ * @param gw_rules rules pointer to rules structure of the can gateway to free allocated memory.
  *
  * @return 0 if success
- * @return -1 if operation is failed
- * @return -2 if linux does not support can gateway
  * @return -3 if argument is invalid
  */
 int cangw_release_rules(socketcan_gw_rules_t *gw_rules)
