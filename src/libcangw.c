@@ -234,9 +234,56 @@ error_return:
 }
 
 /**
+ * @ingroup intern
+ * @brief init_req_data - initialize for req data
+ *
+ * @param req pointer to s_request_data structure that is initialized by this function.
+ * @param flags value of the nlmsg_flags
+ * @param type value of the nlmsg_type
+ *
+ * Set a netlink request data from rule to req.
+ */
+static void init_req_data(struct s_request_data *req, unsigned short flags, unsigned short type)
+{
+	// Setup common message
+	memset(req, 0, sizeof(struct s_request_data));
+
+	req->nh.nlmsg_flags = flags;
+	req->nh.nlmsg_type  = type;
+	req->nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtcanmsg));
+	req->nh.nlmsg_seq   = 0;
+
+	req->rtcan.can_family  = AF_CAN;
+	req->rtcan.gwtype = CGW_TYPE_CAN_CAN;
+	req->rtcan.flags = 0;
+}
+
+/**
+ * @ingroup intern
+ * @brief operate_rule_options - operate to options of gw rule
+ *
+ * @param req pointer to s_request_data structure that is wrote the options.
+ * @param rule pointer to source data of the gw configuration rule
+ *
+ * Set a netlink request data from rule to req.
+ */
+static void operate_rule_options(struct s_request_data *req, socketcan_gw_rule_t *rule)
+{
+	if ((rule->options & SOCKETCAN_GW_RULE_ECHO) == SOCKETCAN_GW_RULE_ECHO) {
+		if (rule->echo == 1) {
+			req->rtcan.flags |= CGW_FLAGS_CAN_ECHO;
+		}
+	}
+
+	if ((rule->options & SOCKETCAN_GW_RULE_FILTER) == SOCKETCAN_GW_RULE_FILTER) {
+		addattr_l(&req->nh, sizeof(struct s_request_data), CGW_FILTER, &rule->filter, sizeof(struct can_filter));
+	}
+}
+
+/**
  * @ingroup extern
  * cangw_add_rule - add routing rule to can gateway
- * @param rule rule structure of the can gateway.
+ * @param rule rule data of the can gateway.
  *
  * @return 0 if success
  * @return -1 if operation is failed
@@ -255,16 +302,7 @@ int cangw_add_rule(socketcan_gw_rule_t *rule)
 	}
 
 	// Setup common message
-	memset(&req, 0, sizeof(req));
-
-	req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	req.nh.nlmsg_type  = RTM_NEWROUTE;
-	req.nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtcanmsg));
-	req.nh.nlmsg_seq   = 0;
-
-	req.rtcan.can_family  = AF_CAN;
-	req.rtcan.gwtype = CGW_TYPE_CAN_CAN;
-	req.rtcan.flags = 0;
+	init_req_data(&req, (NLM_F_REQUEST | NLM_F_ACK), RTM_NEWROUTE);
 
 	if ((rule->src_ifindex == 0) || (rule->dst_ifindex == 0)) {
 		// invalid ifindex
@@ -274,16 +312,8 @@ int cangw_add_rule(socketcan_gw_rule_t *rule)
 	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &rule->src_ifindex, sizeof(rule->src_ifindex));
 	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &rule->dst_ifindex, sizeof(rule->dst_ifindex));
 
-	// Echo option
-	if ((rule->options & SOCKETCAN_GW_RULE_ECHO) == SOCKETCAN_GW_RULE_ECHO) {
-		if (rule->echo == 1) {
-			req.rtcan.flags |= CGW_FLAGS_CAN_ECHO;
-		}
-	}
-
-	if ((rule->options & SOCKETCAN_GW_RULE_FILTER) == SOCKETCAN_GW_RULE_FILTER) {
-		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &rule->filter, sizeof(struct can_filter));
-	}
+	// operate options
+	operate_rule_options(&req, rule);
 
 	ret = send_cangw_set_request(&req);
 	if (ret < 0) {
@@ -298,7 +328,7 @@ do_return:
 /**
  * @ingroup extern
  * cangw_delete_rule - delete routing rule to can gateway
- * @param rule rule structure of the can gateway.
+ * @param rule rule data of the can gateway.
  *
  * @return 0 if success
  * @return -1 if operation is failed
@@ -317,16 +347,7 @@ int cangw_delete_rule(socketcan_gw_rule_t *rule)
 	}
 
 	// Setup common message
-	memset(&req, 0, sizeof(req));
-
-	req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-	req.nh.nlmsg_type  = RTM_DELROUTE;
-	req.nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtcanmsg));
-	req.nh.nlmsg_seq   = 0;
-
-	req.rtcan.can_family  = AF_CAN;
-	req.rtcan.gwtype = CGW_TYPE_CAN_CAN;
-	req.rtcan.flags = 0;
+	init_req_data(&req, (NLM_F_REQUEST | NLM_F_ACK), RTM_DELROUTE);
 
 	if ((rule->src_ifindex == 0) || (rule->dst_ifindex == 0)) {
 		// invalid ifindex
@@ -336,16 +357,8 @@ int cangw_delete_rule(socketcan_gw_rule_t *rule)
 	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &rule->src_ifindex, sizeof(rule->src_ifindex));
 	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &rule->dst_ifindex, sizeof(rule->dst_ifindex));
 
-	// Echo option
-	if ((rule->options & SOCKETCAN_GW_RULE_ECHO) == SOCKETCAN_GW_RULE_ECHO) {
-		if (rule->echo == 1) {
-			req.rtcan.flags |= CGW_FLAGS_CAN_ECHO;
-		}
-	}
-
-	if ((rule->options & SOCKETCAN_GW_RULE_FILTER) == SOCKETCAN_GW_RULE_FILTER) {
-		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &rule->filter, sizeof(struct can_filter));
-	}
+	// operate options
+	operate_rule_options(&req, rule);
 
 	ret = send_cangw_set_request(&req);
 	if (ret < 0) {
