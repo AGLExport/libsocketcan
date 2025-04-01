@@ -80,6 +80,15 @@ do_return:
 	return result;
 }
 
+/**
+ * @ingroup intern
+ * push_gw_rule - push gw rule into gw_rules
+ * @param gw_rules pointer to rules structure of the can gateway.
+ * @param rule pointer to new rule to push into gw_rules.
+ *
+ * @return 0 if success
+ * @return -1 if operation is failed
+ */
 static int push_gw_rule(socketcan_gw_rules_t *gw_rules, socketcan_gw_rule_t *rule)
 {
 	int result = 0;
@@ -115,6 +124,13 @@ do_return:
 	return result;
 }
 
+/**
+ * @ingroup intern
+ * free_gw_rules - free memory of gw_rules
+ * @param gw_rules pointer to rules structure of the can gateway.
+ *
+ * @return 0 if success
+ */
 static int free_gw_rules(socketcan_gw_rules_t *gw_rules)
 {
 	for(size_t i=0; i < gw_rules->rule_num; i++) {
@@ -130,16 +146,27 @@ static int free_gw_rules(socketcan_gw_rules_t *gw_rules)
 	return 0;
 }
 
+/**
+ * @ingroup intern
+ * parse_listing_data - parse routing data that get from kernel
+ * @param gw_rules rules pointer to rules structure of the can gateway to add rule element.
+ * @param rxbuf buffer of received data from kernel.
+ * @param len buffer length of received data from kernel.
+ *
+ * @return 1 if completed to get routing rule from kernel
+ * @return 0 if end of received data
+ * @return -1 if operation is failed
+ */
 static int parse_listing_data(socketcan_gw_rules_t *gw_rules, unsigned char *rxbuf, int len)
 {
-	struct rtcanmsg *rtc;
-	struct rtattr *rta;
-	struct nlmsghdr *nlh;
-	int rtlen;
 	socketcan_gw_rule_t *rule = NULL;
+	struct rtcanmsg *rtc = NULL;
+	struct rtattr *rta = NULL;
+	struct nlmsghdr *nlh = NULL;
+	int rtlen = 0;
 	int result = 0;
 
-	nlh = (struct nlmsghdr *)rxbuf;
+	nlh = (struct nlmsghdr*)rxbuf;
 
 	while (1) {
 		if (!NLMSG_OK(nlh, len)){
@@ -170,14 +197,14 @@ static int parse_listing_data(socketcan_gw_rules_t *gw_rules, unsigned char *rxb
 
 		rule = (socketcan_gw_rule_t*)malloc(sizeof(socketcan_gw_rule_t));
 		if (rule == NULL) {
-			result = -2;
+			result = -1;
 			goto error_return;
 		}
 		memset(rule, 0 ,sizeof(socketcan_gw_rule_t));
 
 		rta = (struct rtattr *) RTCAN_RTA(rtc);
 		rtlen = RTCAN_PAYLOAD(nlh);
-		for(; RTA_OK(rta, rtlen); rta=RTA_NEXT(rta,rtlen)) {
+		while (RTA_OK(rta, rtlen)) {
 			switch(rta->rta_type) {
 			case CGW_SRC_IF:
 				rule->src_ifindex = (*(unsigned int*)RTA_DATA(rta));
@@ -188,6 +215,7 @@ static int parse_listing_data(socketcan_gw_rules_t *gw_rules, unsigned char *rxb
 			default:
 				break;
 			}
+			rta = RTA_NEXT(rta, rtlen);
 		}
 
 		rule->options = (SOCKETCAN_GW_RULE_ECHO | SOCKETCAN_GW_RULE_FILTER);
@@ -200,7 +228,7 @@ static int parse_listing_data(socketcan_gw_rules_t *gw_rules, unsigned char *rxb
 
 		rta = (struct rtattr *) RTCAN_RTA(rtc);
 		rtlen = RTCAN_PAYLOAD(nlh);
-		for(; RTA_OK(rta, rtlen); rta=RTA_NEXT(rta,rtlen)) {
+		while(RTA_OK(rta, rtlen)) {
 			switch(rta->rta_type) {
 			case CGW_FILTER:
 			{
@@ -217,19 +245,18 @@ static int parse_listing_data(socketcan_gw_rules_t *gw_rules, unsigned char *rxb
 			default:
 				break;
 			}
+			rta = RTA_NEXT(rta, rtlen);
 		}
-		/* end of entry */
 
 		push_gw_rule(gw_rules, rule);
 
-		/* jump to next NLMSG in the given buffer */
 		nlh = NLMSG_NEXT(nlh, len);
 	}
 
 	return result;
 
 error_return:
-	free(rule);
+	(void) free(rule);
 	return result;
 }
 
